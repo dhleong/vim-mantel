@@ -65,7 +65,7 @@ func! s:onPendingRequestFinished(bufnr)
     let &syntax = &syntax
 endfunc
 
-func! s:onAliasedPublics(bufnr, resp)
+func! s:onEvalResponse(bufnr, resp)
     if has_key(a:resp, 'err')
         echom 'ERROR' . string(a:resp)
         return
@@ -83,13 +83,16 @@ func! s:onAliasedPublics(bufnr, resp)
 endfunc
 
 
+" ======= Public interface ================================
+
 func! mantel#nrepl#FetchVarsViaEval(bufnr, code)
+    " Asynchronously fetch vars by eval'ing clj code
+
     call mantel#async#AdjustPendingRequests(a:bufnr, 1)
 
-    " Asynchronously fetch vars by eval'ing clj code
     let request = s:wrapDictWithEvalable(s:wrapCljWithMapToType(a:code))
     call fireplace#message({
         \ 'op': 'eval',
         \ 'code': request,
-        \ }, function('s:onAliasedPublics', [a:bufnr]))
+        \ }, function('s:onEvalResponse', [a:bufnr]))
 endfunc
