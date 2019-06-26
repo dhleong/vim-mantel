@@ -76,7 +76,11 @@ func! s:onEvalResponse(bufnr, resp)
     let pendingSyntax = getbufvar(a:bufnr, 'mantel_pendingSyntax', {})
     let publics = eval(a:resp.value)
     for key in keys(publics)
-        let pendingSyntax[key] = pendingSyntax[key] + publics[key]
+        if has_key(pendingSyntax, key)
+            let pendingSyntax[key] = pendingSyntax[key] + publics[key]
+        else
+            let pendingSyntax[key] = publics[key]
+        endif
     endfor
 
     call s:onPendingRequestFinished(a:bufnr)
