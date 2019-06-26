@@ -11,15 +11,15 @@ endfunc
 " ======= Public interface ================================
 
 func! mantel#Highlight()
-    " reset; 1 for the the ns-aliases call below
+    " reset pending state for new request
+    " TODO cancel pending requests (?)
     let b:mantel_pendingRequests = 0
 
-    " TODO other core types?
     let b:mantel_pendingSyntax = {
         \ 'clojureFunc': [],
         \ 'clojureMacro': [],
         \ 'clojureVariable': [],
-        \ }
+        \ } " TODO other core types?
 
     let bufnr = bufnr('%')
 
