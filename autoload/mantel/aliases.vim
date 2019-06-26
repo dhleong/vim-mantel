@@ -19,7 +19,7 @@ func! s:onNsAliases(bufnr, resp)
         call add(pairs, [ alias . '/', ns ])
     endfor
 
-    call mantel#ns#FetchVarsForPairs(a:bufnr, pairs)
+    call mantel#publics#FetchVarsForPairs(a:bufnr, pairs)
     call mantel#async#AdjustPendingRequests(a:bufnr, -1)
 endfunc
 

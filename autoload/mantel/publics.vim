@@ -1,4 +1,4 @@
-func! mantel#ns#FetchVarsForPairs(bufnr, prefixAndNsPairs) abort
+func! mantel#publics#FetchVarsForPairs(bufnr, prefixAndNsPairs) abort
     " Given a collection of [prefix, ns] pairs, fetch public vars
     " from each ns, prefixed with the associated prefix
 

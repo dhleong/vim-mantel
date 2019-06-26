@@ -25,7 +25,7 @@ func! mantel#Highlight()
 
     " fetch public vars exported by *this* ns
     let ns = fireplace#ns()
-    call mantel#ns#FetchVarsForPairs(bufnr, [['', ns]])
+    call mantel#publics#FetchVarsForPairs(bufnr, [['', ns]])
 
     " fetch public vars in aliased ns (eg: s/def from spec)
     call mantel#aliases#Fetch(bufnr)
