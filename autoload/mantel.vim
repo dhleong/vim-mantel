@@ -32,6 +32,6 @@ func! mantel#Highlight()
 
     if s:hasNsRefers(bufnr)
         " use ns-refers to fetch referred vars
-        call mantel#refers#Fetch(bufnr)
+        call mantel#refers#Fetch(bufnr, ns)
     endif
 endfunc

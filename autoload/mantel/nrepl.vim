@@ -88,7 +88,7 @@ func! mantel#nrepl#FetchVarsViaEval(bufnr, code)
 
     " Asynchronously fetch vars by eval'ing clj code
     let request = s:wrapDictWithEvalable(s:wrapCljWithMapToType(a:code))
-    echom fireplace#message({
+    call fireplace#message({
         \ 'op': 'eval',
         \ 'code': request,
         \ }, function('s:onAliasedPublics', [a:bufnr]))
