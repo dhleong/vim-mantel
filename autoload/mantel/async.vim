@@ -6,6 +6,8 @@ func! mantel#async#AdjustPendingRequests(bufnr, delta)
 
     let newCount = oldCount + a:delta
     call setbufvar(a:bufnr, 'mantel_pendingRequests', newCount)
+
+    return newCount
 endfunc
 
 func! mantel#async#ConcatSyntaxKeys(bufnr, kind, keys)
