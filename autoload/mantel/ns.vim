@@ -7,15 +7,24 @@ let s:maxNsLines = 100
 " ======= Callbacks =======================================
 
 func! s:onNsEval(bufnr, resp)
-    if has_key(a:resp, 'err')
-        echom 'ERROR' . string(a:resp)
-        return
-    elseif !has_key(a:resp, 'value')
-        return
+    if has_key(a:resp, 'macros')
+        " we can't get meta on these, but they were explicitly
+        " refer'd as macros, so they ought to be
+        call mantel#async#ConcatSyntaxKeys(
+            \ a:bufnr,
+            \ 'clojureMacro',
+            \ a:resp.macros,
+            \ )
     endif
 
-    echom a:resp
+    if has_key(a:resp, 'vars') && len(a:resp.vars)
+        " okay, one more hop: resolve the types of the non-macro referred vars
+        let vars = map(a:resp.vars, '"{:var-ref (var " . v:val . ")}"')
+        let request = '[' . join(vars, ' ') . ']'
+        call mantel#nrepl#FetchVarsViaEval(a:bufnr, request)
+    endif
 
+    " this async bit is done
     call mantel#async#AdjustPendingRequests(a:bufnr, -1)
 endfunc
 
@@ -25,30 +34,30 @@ func! s:onPath(bufnr, resp)
     endif
 
     let path = a:resp.path
-    echom "got path: " . path
     let contents = join(readfile(path, '', s:maxNsLines), '\n')
-    let readerNs = 'clojure.edn'
-    if matchstr(path, '.cljs$') !=# ''
-        let readerNs = 'cljs.reader'
+    let readerNs = 'cljs.reader'  " we're *probably* in clojurescript
+    if matchstr(path, '.cljs$') ==# ''
+        let readerNs = 'clojure.edn'
     endif
 
-    " TODO 
+    " NOTE: since accessing var metadata and things like (ns-publics) are
+    " compile-time *only* in clojurescript, we have to first fetch the
+    " symbols, then issue *another* request to get their info
     let request = '(let [ns-form (->> "' . escape(contents, '"') . '"'
               \ . '                   (' . readerNs . '/read-string))'
-              \ . '      macros (filter'
-              \ . '               #(and (seq? %)'
-              \ . '                     (= :require-macros (first %)))'
-              \ . '               ns-form)'
-              \ . '      refers (filter'
-              \ . '               #(and (seq? %)'
-              \ . '                     (= :require (first %)))'
-              \ . '               ns-form)]'
-              \ . '  refers)'
-    echom "request: " . request
-    call fireplace#message({
-        \ 'op': 'eval',
-        \ 'code': request,
-        \ }, function('s:onNsEval', [a:bufnr]))
+              \ . '      parsed (binding [cljs.env/*compiler* (atom nil)]'
+              \ . '               (cljs.analyzer/parse'
+              \ . "                 'ns"
+              \ . '                 (cljs.analyzer/empty-env)'
+              \ . '                 ns-form))]'
+              \ . '  {:macros (map first (:use-macros parsed))'
+              \ . '   :vars (map (fn [[var-name var-ns]]'
+              \ . '                (str var-ns "/" var-name))'
+              \ . '              (:uses parsed))})'
+
+    call mantel#nrepl#EvalAsVim(
+        \ request,
+        \ function('s:onNsEval', [a:bufnr]))
 endfunc
 
 

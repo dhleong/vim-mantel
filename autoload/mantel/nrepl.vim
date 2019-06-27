@@ -18,10 +18,11 @@ func! s:wrapCljWithMapToType(clj)
         \.                   s:reservedSyntaxWords . ' alias))))'
         \. '     (map (fn [{:keys [var-ref alias]}]'
         \. '            (let [m (meta var-ref)]'
-        \. '              [alias, (cond'
-        \. '                        (:macro m) "clojureMacro"'
-        \. '                        (seq (-> m :arglists)) "clojureFunc"'
-        \. '                        :else "clojureVariable")])))'
+        \. '              [(or alias (:name m))'
+        \. '               (cond'
+        \. '                 (:macro m) "clojureMacro"'
+        \. '                 (seq (-> m :arglists)) "clojureFunc"'
+        \. '                 :else "clojureVariable")])))'
         \. '     (group-by second)'
         \. '     (reduce-kv'
         \. '        (fn [m kind entries]'
@@ -65,7 +66,15 @@ func! s:onPendingRequestFinished(bufnr)
     let &syntax = &syntax
 endfunc
 
-func! s:onEvalResponse(bufnr, resp)
+func! s:onFetchVarsResponse(bufnr, publics)
+    for key in keys(a:publics)
+        call mantel#async#ConcatSyntaxKeys(a:bufnr, key, a:publics[key])
+    endfor
+
+    call s:onPendingRequestFinished(a:bufnr)
+endfunc
+
+func! s:onEvalResponse(callback, resp)
     if has_key(a:resp, 'err')
         echom 'ERROR' . string(a:resp)
         return
@@ -73,17 +82,8 @@ func! s:onEvalResponse(bufnr, resp)
         return
     endif
 
-    let pendingSyntax = getbufvar(a:bufnr, 'mantel_pendingSyntax', {})
-    let publics = eval(a:resp.value)
-    for key in keys(publics)
-        if has_key(pendingSyntax, key)
-            let pendingSyntax[key] = pendingSyntax[key] + publics[key]
-        else
-            let pendingSyntax[key] = publics[key]
-        endif
-    endfor
-
-    call s:onPendingRequestFinished(a:bufnr)
+    let evaluated = eval(a:resp.value)
+    call a:callback(evaluated)
 endfunc
 
 
@@ -91,12 +91,20 @@ endfunc
 
 func! mantel#nrepl#FetchVarsViaEval(bufnr, code)
     " Asynchronously fetch vars by eval'ing clj code
+    " The code should produce a sequence of maps with the
+    " keys `:var-ref` and, optionally, `:alias`
 
     call mantel#async#AdjustPendingRequests(a:bufnr, 1)
 
-    let request = s:wrapDictWithEvalable(s:wrapCljWithMapToType(a:code))
+    call mantel#nrepl#EvalAsVim(
+        \ s:wrapCljWithMapToType(a:code),
+        \ function('s:onFetchVarsResponse', [a:bufnr]),
+        \ )
+endfunc
+
+func! mantel#nrepl#EvalAsVim(code, callback)
     call fireplace#message({
         \ 'op': 'eval',
-        \ 'code': request,
-        \ }, function('s:onEvalResponse', [a:bufnr]))
+        \ 'code': s:wrapDictWithEvalable(a:code),
+        \ }, function('s:onEvalResponse', [a:callback]))
 endfunc
