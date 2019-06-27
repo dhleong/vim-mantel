@@ -10,7 +10,7 @@ endfunc
 
 " ======= Public interface ================================
 
-func! mantel#Highlight()
+func! mantel#Highlight() abort
     " reset pending state for new request
     " TODO cancel pending requests (?)
     let b:mantel_pendingRequests = 0
@@ -35,5 +35,13 @@ func! mantel#Highlight()
         call mantel#refers#Fetch(bufnr, ns)
     else
         call mantel#ns#ParseReferred(bufnr, ns)
+    endif
+endfunc
+
+func! mantel#TryHighlight() abort
+    " Attempt to perform highlighting if there's an active
+    " fireplace repl connection available
+    if fireplace#op_available('eval')
+        call mantel#Highlight()
     endif
 endfunc
