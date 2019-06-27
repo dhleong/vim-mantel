@@ -34,7 +34,7 @@ func! mantel#Highlight() abort
         " use ns-refers to fetch referred vars
         call mantel#refers#Fetch(bufnr, ns)
     else
-        call mantel#ns#ParseReferred(bufnr, ns)
+        call mantel#ns#ParseReferredPath(bufnr, expand('%:p'))
     endif
 endfunc
 

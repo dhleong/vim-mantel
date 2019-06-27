@@ -34,6 +34,11 @@ func! s:onPath(bufnr, resp)
     endif
 
     let path = a:resp.path
+    if !filereadable(path)
+        " probably given a relative path
+        return
+    endif
+
     let contents = join(readfile(path, '', s:maxNsLines), '\n')
     let readerNs = 'cljs.reader'  " we're *probably* in clojurescript
     if matchstr(path, '.cljs$') ==# ''
@@ -73,4 +78,15 @@ func! mantel#ns#ParseReferred(bufnr, ns)
         \ 'op': 'ns-path',
         \ 'ns': a:ns,
         \ }, function('s:onPath', [a:bufnr]))
+endfunc
+
+func! mantel#ns#ParseReferredPath(bufnr, path)
+    " Version of ParseReferred where the path to the file is provided
+    " directly. ns-path occasionally returns a relative path, and I'm
+    " not sure how to extract the relative path
+
+    " NOTE: this isn't async, but some of the callbacks assume that
+    " there's an async request pending, so let's make it happen here
+    call mantel#async#AdjustPendingRequests(a:bufnr, 1)
+    call s:onPath(a:bufnr, {'path': a:path})
 endfunc
