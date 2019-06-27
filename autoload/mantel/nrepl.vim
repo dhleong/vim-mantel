@@ -37,41 +37,12 @@ endfunc
 
 " ======= callbacks =======================================
 
-func! s:onPendingRequestFinished(bufnr)
-    let newCount = mantel#async#AdjustPendingRequests(a:bufnr, -1)
-
-    if newCount > 0
-        " still pending requests; we want to apply all changes at once
-        " to avoid flicker
-        return
-    endif
-
-    " due to the way the syntax_keywords map is applied, we cannot allow
-    " empty lists
-    let pendingSyntax = getbufvar(a:bufnr, 'mantel_pendingSyntax', {})
-    for key in keys(pendingSyntax)
-        if empty(pendingSyntax[key])
-            unlet pendingSyntax[key]
-        endif
-    endfor
-
-    " we can only get the core keywords (eg: macros like `and`) via ns-refers
-    " TODO setting this to 1 also disables default highlighting for things
-    " like `throw`, `new`, `case`, etc.
-    let hasCoreKeywords = 0 " TODO s:hasNsRefers(a:bufnr)
-
-    " apply results
-    let b:clojure_syntax_keywords = pendingSyntax
-    let b:clojure_syntax_without_core_keywords = hasCoreKeywords
-    let &syntax = &syntax
-endfunc
-
 func! s:onFetchVarsResponse(bufnr, publics)
     for key in keys(a:publics)
         call mantel#async#ConcatSyntaxKeys(a:bufnr, key, a:publics[key])
     endfor
 
-    call s:onPendingRequestFinished(a:bufnr)
+    call mantel#async#AdjustPendingRequests(a:bufnr, -1)
 endfunc
 
 func! s:onEvalResponse(callback, resp)
