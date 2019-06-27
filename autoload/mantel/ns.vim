@@ -19,7 +19,12 @@ func! s:onNsEval(bufnr, resp)
 
     if has_key(a:resp, 'vars') && len(a:resp.vars)
         " okay, one more hop: resolve the types of the non-macro referred vars
-        let vars = map(a:resp.vars, '"{:var-ref (var " . v:val . ")}"')
+        let vars = []
+        for v in a:resp.vars
+            " if we can't resolve the var, assume it's a macro
+            call add(vars, "(when-let [var-ref (resolve '" . v . ')]'
+                        \. '  {:var-ref var-ref})')
+        endfor
         let request = '[' . join(vars, ' ') . ']'
         call mantel#nrepl#FetchVarsViaEval(a:bufnr, request)
     endif
@@ -61,6 +66,7 @@ func! s:onPath(bufnr, resp)
               \ . '              (:uses parsed))})'
 
     call mantel#nrepl#EvalAsVim(
+        \ a:bufnr,
         \ request,
         \ function('s:onNsEval', [a:bufnr]))
 endfunc
