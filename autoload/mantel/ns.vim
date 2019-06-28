@@ -4,6 +4,37 @@
 let s:maxNsLines = 100
 
 
+" ======= utils ===========================================
+
+func! s:trimToNsForm(contents)
+    let contents = a:contents
+    let i = 0
+    let nesting = 0
+    let hasSeenNs = 0
+
+    while i < len(contents)
+        if contents[i] ==# '('
+            let nesting += 1
+        elseif contents[i] ==# ')'
+            let nesting -= 1
+        endif
+
+        if nesting == 0 && hasSeenNs
+            return contents[:i]
+        elseif !hasSeenNs && nesting > 0
+            " see if this is the ns form
+            if contents[i-1:] =~# '\<ns\>'
+                let hasSeenNs = 1
+            endif
+        endif
+
+        let i += 1
+    endwhile
+
+    return contents
+endfunc
+
+
 " ======= Callbacks =======================================
 
 func! s:onNsEval(bufnr, resp)
@@ -45,6 +76,8 @@ func! s:onPath(bufnr, resp)
     endif
 
     let contents = join(readfile(path, '', s:maxNsLines), '\n')
+    let contents = s:trimToNsForm(contents)
+
     let readerNs = 'cljs.reader'  " we're *probably* in clojurescript
     if matchstr(path, '.cljs$') ==# ''
         let readerNs = 'clojure.edn'
