@@ -41,6 +41,9 @@ func! mantel#TryHighlight() abort
     " Attempt to perform highlighting if there's an active
     " fireplace repl connection available
     if fireplace#op_available('eval')
-        call mantel#Highlight()
+        try
+            call mantel#Highlight()
+        catch /not an open channel/
+        endtry
     endif
 endfunc
