@@ -12,22 +12,27 @@ let s:reservedSyntaxWords =
 " ======= utils ===========================================
 
 func! s:wrapCljWithMapToType(clj)
-    return '(->> ' . a:clj
-        \. '     (filter (fn [{:keys [alias]}]'
-        \. '               (not (contains? '
-        \.                   s:reservedSyntaxWords . ' alias))))'
-        \. '     (map (fn [{:keys [var-ref alias]}]'
-        \. '            (let [m (meta var-ref)]'
-        \. '              [(or alias (:name m))'
-        \. '               (cond'
-        \. '                 (:macro m) "clojureMacro"'
-        \. '                 (seq (-> m :arglists)) "clojureFunc"'
-        \. '                 :else "clojureVariable")])))'
-        \. '     (group-by second)'
-        \. '     (reduce-kv'
-        \. '        (fn [m kind entries]'
-        \. '           (assoc m kind (map first entries)))'
-        \. '        {}))'
+    return '(letfn [(fn-ref? [v]'
+        \. '          (or (seq (:arglists (meta v)))'
+        \. '              (when-let [derefd (when (var? v) @v)]'
+        \. '                (or (fn? derefd)'
+        \. '                    (instance? MultiFn derefd)))))]'
+        \. '  (->> ' . a:clj
+        \. '       (filter (fn [{:keys [alias]}]'
+        \. '                 (not (contains? '
+        \.                     s:reservedSyntaxWords . ' alias))))'
+        \. '       (map (fn [{:keys [var-ref alias]}]'
+        \. '              (let [m (meta var-ref)]'
+        \. '                [(or alias (:name m))'
+        \. '                 (cond'
+        \. '                   (:macro m) "clojureMacro"'
+        \. '                   (fn-ref? var-ref) "clojureFunc"'
+        \. '                   :else "clojureVariable")])))'
+        \. '       (group-by second)'
+        \. '       (reduce-kv'
+        \. '          (fn [m kind entries]'
+        \. '             (assoc m kind (map first entries)))'
+        \. '          {})))'
 endfunc
 
 func! s:wrapDictWithEvalable(clj)
