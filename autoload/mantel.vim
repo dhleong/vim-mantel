@@ -2,9 +2,8 @@
 " ======= utils ===========================================
 
 func! s:hasNsRefers(bufnr)
-    " currently, this only works in clj files; I'm not sure, but
-    " I don't *think* it works in cljc files....
-    return expand('#' . a:bufnr . ':e') ==# 'clj'
+    " only cljs seems to lack this
+    return expand('#' . a:bufnr . ':e') !=# 'cljs'
 endfunc
 
 
