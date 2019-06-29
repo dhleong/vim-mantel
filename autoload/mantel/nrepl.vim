@@ -51,11 +51,20 @@ func! s:onFetchVarsResponse(bufnr, publics) abort
 endfunc
 
 func! s:onEvalResponse(bufnr, callback, resp) abort
-    if has_key(a:resp, 'err')
-        echom 'ERROR' . string(a:resp)
-        call mantel#async#AdjustPendingRequests(a:bufnr, -1)
-        return
-    elseif !has_key(a:resp, 'value')
+    if !has_key(a:resp, 'value')
+        if has_key(a:resp, 'ex')
+            " we can get multiple 'err' responses, but should only
+            " get one ex
+            call mantel#async#AdjustPendingRequests(a:bufnr, -1)
+            echom 'mantel error:' . a:resp.ex
+        endif
+
+        if has_key(a:resp, 'err') && a:resp.err !~# '^WARNING'
+            " log the error
+            echom 'mantel error:' . a:resp.err
+        endif
+
+        " whatever the case, don't try to eval
         return
     endif
 
