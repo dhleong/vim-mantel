@@ -37,24 +37,19 @@ endfunc
 
 " ======= Callbacks =======================================
 
-func! s:onNsEval(bufnr, resp)
-    if has_key(a:resp, 'macros')
-        " we can't get meta on these, but they were explicitly
-        " refer'd as macros, so they ought to be
-        call mantel#async#ConcatSyntaxKeys(
-            \ a:bufnr,
-            \ 'clojureMacro',
-            \ a:resp.macros,
-            \ )
+func! s:onNsEval(bufnr, vars)
+    if type(a:vars) != type([])
+        return
     endif
 
-    if has_key(a:resp, 'vars') && len(a:resp.vars)
+    if len(a:vars)
         " okay, one more hop: resolve the types of the non-macro referred vars
         let vars = []
-        for v in a:resp.vars
-            " if we can't resolve the var, assume it's a macro
-            call add(vars, "(when-let [var-ref (resolve '" . v . ')]'
-                        \. '  {:var-ref var-ref})')
+        for v in a:vars
+            " if we can't resolve the var, it might be a macro
+            call add(vars, "(if-let [var-ref (resolve '" . v . ')]'
+                        \. '  {:var-ref var-ref}'
+                        \. "  {:?macro '" . v . '})')
         endfor
         let request = '[' . join(vars, ' ') . ']'
         call mantel#nrepl#FetchVarsViaEval(a:bufnr, request)
@@ -86,17 +81,20 @@ func! s:onPath(bufnr, resp)
     " NOTE: since accessing var metadata and things like (ns-publics) are
     " compile-time *only* in clojurescript, we have to first fetch the
     " symbols, then issue *another* request to get their info
-    let request = '(let [ns-form (->> "' . escape(contents, '"') . '"'
-              \ . '                   (' . readerNs . '/read-string))'
-              \ . '      parsed (binding [cljs.env/*compiler* (atom nil)]'
-              \ . '               (cljs.analyzer/parse'
-              \ . "                 'ns"
-              \ . '                 (cljs.analyzer/empty-env)'
-              \ . '                 ns-form))]'
-              \ . '  {:macros (map first (:use-macros parsed))'
-              \ . '   :vars (map (fn [[var-name var-ns]]'
-              \ . '                (str var-ns "/" var-name))'
-              \ . '              (:uses parsed))})'
+    let request = '(do '
+              \ . "  (require 'cljs.analyzer)"
+              \ . '  (let [ns-form (->> "' . escape(contents, '"') . '"'
+              \ . '                     (' . readerNs . '/read-string))'
+              \ . '        parsed (binding [cljs.env/*compiler* (atom nil)]'
+              \ . '                 (cljs.analyzer/parse'
+              \ . "                   'ns"
+              \ . '                   (cljs.analyzer/empty-env)'
+              \ . '                   ns-form))]'
+              \ . '    (->> (concat'
+              \ . '           (:use-macros parsed)'
+              \ . '           (:uses parsed))'
+              \ . '         (map (fn [[var-name var-ns]]'
+              \ . '                (str var-ns "/" var-name))))))'
 
     call mantel#nrepl#EvalAsVim(
         \ a:bufnr,
