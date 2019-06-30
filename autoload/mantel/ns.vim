@@ -37,21 +37,15 @@ endfunc
 
 " ======= Callbacks =======================================
 
-func! s:onNsEval(bufnr, resp)
-    if has_key(a:resp, 'macros')
-        " we can't get meta on these, but they were explicitly
-        " refer'd as macros, so they ought to be
-        call mantel#async#ConcatSyntaxKeys(
-            \ a:bufnr,
-            \ 'clojureMacro',
-            \ a:resp.macros,
-            \ )
+func! s:onNsEval(bufnr, vars)
+    if type(a:vars) != type([])
+        return
     endif
 
-    if has_key(a:resp, 'vars') && len(a:resp.vars)
+    if len(a:vars)
         " okay, one more hop: resolve the types of the non-macro referred vars
         let vars = []
-        for v in a:resp.vars
+        for v in a:vars
             " if we can't resolve the var, it might be a macro
             call add(vars, "(if-let [var-ref (resolve '" . v . ')]'
                         \. '  {:var-ref var-ref}'
@@ -84,8 +78,6 @@ func! s:onPath(bufnr, resp)
         let readerNs = 'clojure.edn'
     endif
 
-    " TODO just merge in (:use-macros) entries, so we can verify they
-    " actually are extant macros
     " NOTE: since accessing var metadata and things like (ns-publics) are
     " compile-time *only* in clojurescript, we have to first fetch the
     " symbols, then issue *another* request to get their info
@@ -98,10 +90,11 @@ func! s:onPath(bufnr, resp)
               \ . "                   'ns"
               \ . '                   (cljs.analyzer/empty-env)'
               \ . '                   ns-form))]'
-              \ . '    {:macros (map first (:use-macros parsed))'
-              \ . '     :vars (map (fn [[var-name var-ns]]'
-              \ . '                  (str var-ns "/" var-name))'
-              \ . '                (:uses parsed))}))'
+              \ . '    (->> (concat'
+              \ . '           (:use-macros parsed)'
+              \ . '           (:uses parsed))'
+              \ . '         (map (fn [[var-name var-ns]]'
+              \ . '                (str var-ns "/" var-name))))))'
 
     call mantel#nrepl#EvalAsVim(
         \ a:bufnr,
