@@ -78,23 +78,27 @@ func! s:onPath(bufnr, resp)
         let readerNs = 'clojure.edn'
     endif
 
+    " ensure the cljs analyzer ns is loaded
+    call fireplace#message({
+        \ 'op': 'eval',
+        \ 'code': "(require 'cljs.analyzer)"
+        \ })
+
     " NOTE: since accessing var metadata and things like (ns-publics) are
     " compile-time *only* in clojurescript, we have to first fetch the
     " symbols, then issue *another* request to get their info
-    let request = '(do '
-              \ . "  (require 'cljs.analyzer)"
-              \ . '  (let [ns-form (->> "' . escape(contents, '"') . '"'
-              \ . '                     (' . readerNs . '/read-string))'
-              \ . '        parsed (binding [cljs.env/*compiler* (atom nil)]'
-              \ . '                 (cljs.analyzer/parse'
-              \ . "                   'ns"
-              \ . '                   (cljs.analyzer/empty-env)'
-              \ . '                   ns-form))]'
-              \ . '    (->> (concat'
-              \ . '           (:use-macros parsed)'
-              \ . '           (:uses parsed))'
-              \ . '         (map (fn [[var-name var-ns]]'
-              \ . '                (str var-ns "/" var-name))))))'
+    let request = '(let [ns-form (->> "' . escape(contents, '"') . '"'
+              \ . '                   (' . readerNs . '/read-string))'
+              \ . '      parsed (binding [cljs.env/*compiler* (atom nil)]'
+              \ . '               (cljs.analyzer/parse'
+              \ . "                 'ns"
+              \ . '                 (cljs.analyzer/empty-env)'
+              \ . '                 ns-form))]'
+              \ . '  (->> (concat'
+              \ . '         (:use-macros parsed)'
+              \ . '         (:uses parsed))'
+              \ . '       (map (fn [[var-name var-ns]]'
+              \ . '              (str var-ns "/" var-name))))))'
 
     call mantel#nrepl#EvalAsVim(
         \ a:bufnr,
