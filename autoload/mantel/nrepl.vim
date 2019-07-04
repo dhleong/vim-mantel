@@ -108,6 +108,11 @@ func! s:onFetchVarsResponse(bufnr, publics) abort
     call mantel#async#AdjustPendingRequests(a:bufnr, -1)
 endfunc
 
+func! s:onFetchTypedVarsResponse(bufnr, type, vars) abort
+    call mantel#async#ConcatSyntaxKeys(a:bufnr, a:type, a:vars)
+    call mantel#async#AdjustPendingRequests(a:bufnr, -1)
+endfunc
+
 func! s:onEvalResponse(bufnr, callback, resp) abort
     if !has_key(a:resp, 'value')
         if has_key(a:resp, 'ex')
@@ -144,11 +149,25 @@ func! mantel#nrepl#FetchVarsViaEval(bufnr, code)
 
     call mantel#async#AdjustPendingRequests(a:bufnr, 1)
 
-
     call mantel#nrepl#EvalAsVim(
         \ a:bufnr,
         \ s:wrapCljWithMapToType(a:code),
         \ function('s:onFetchVarsResponse', [a:bufnr]),
+        \ )
+endfunc
+
+func! mantel#nrepl#FetchTypedVarsViaEval(bufnr, type, code)
+    " Asynchronously fetch vars by eval'ing clj code
+    " The code should produce a sequence of symbols or strings that are
+    " aliases to vars of the given `type`, where `type` is one of the
+    " syntax types, eg: clojureFunc, clojureVariable, etc.
+
+    call mantel#async#AdjustPendingRequests(a:bufnr, 1)
+
+    call mantel#nrepl#EvalAsVim(
+        \ a:bufnr,
+        \ a:code,
+        \ function('s:onFetchTypedVarsResponse', [a:bufnr, a:type]),
         \ )
 endfunc
 

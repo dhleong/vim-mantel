@@ -33,8 +33,13 @@ func! mantel#Highlight() abort
         " use ns-refers to fetch referred vars
         call mantel#refers#Fetch(bufnr, ns)
     else
+        " attempt to parse the (ns) form of the current file
+        " to extract referred vars
         call mantel#ns#ParseReferredPath(bufnr, expand('%:p'))
     endif
+
+    " fetch imported classes
+    call mantel#imports#Fetch(bufnr, ns)
 endfunc
 
 func! mantel#TryHighlight() abort
