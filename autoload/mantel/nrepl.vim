@@ -8,6 +8,17 @@ let s:reservedSyntaxWords =
     \.'"cchar" "contained" "containedin" "nextgroup" "transparent" "skipwhite"'
     \.'"skipnl" "skipempty"}'
 
+" special case symbol-type mappings; these might read as macros, but actually
+" we want them to be clojureSpecial, for example
+let s:specials =
+    \ '(->> {"clojureSpecial" '
+    \."       '[def if do let quote var fn loop recur throw try catch finally "
+    \.'         monitor-enter monitor-exit . new set!]}'
+    \.'     (reduce-kv (fn [m kind entries]'
+    \.'                   (merge m'
+    \.'                          (zipmap (map str entries) '
+    \.'                                  (repeat kind))))'
+    \.'                {}))'
 
 " ======= utils ===========================================
 
@@ -29,13 +40,15 @@ func! s:wrapCljWithMapToType(clj)
         \. '                 (not (contains? '
         \.                     s:reservedSyntaxWords . ' alias))))'
         \. '       (map (fn [{:keys [var-ref alias ?macro]}]'
-        \. '              (let [m (meta var-ref)]'
-        \. '                [(or alias (:name m) ?macro)'
-        \. '                 (cond'
-        \. '                   ?macro "mantelMaybeMacro"'
-        \. '                   (:macro m) "clojureMacro"'
-        \. '                   (fn-ref? var-ref) "clojureFunc"'
-        \. '                   :else "clojureVariable")])))'
+        \. '              (let [m (meta var-ref)'
+        \. '                    n (str (or alias (:name m) ?macro))]'
+        \. '                [n'
+        \. '                 (or (get ' . s:specials . ' n)'
+        \. '                     (cond'
+        \. '                       ?macro "mantelMaybeMacro"'
+        \. '                       (:macro m) "clojureMacro"'
+        \. '                       (fn-ref? var-ref) "clojureFunc"'
+        \. '                       :else "clojureVariable"))])))'
         \. '       (group-by second)'
         \. '       (reduce-kv'
         \. '          (fn [m kind entries]'
