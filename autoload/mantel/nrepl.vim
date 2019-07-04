@@ -12,8 +12,16 @@ let s:reservedSyntaxWords =
 " we want them to be clojureSpecial, for example
 let s:specials =
     \ '(->> {"clojureSpecial" '
-    \."       '[def if do let quote var fn loop recur throw try catch finally "
-    \.'         monitor-enter monitor-exit . new set!]}'
+    \."       '(def if do let quote var fn loop recur "
+    \.'         monitor-enter monitor-exit . new set!)'
+    \.'      "clojureCond" '
+    \."       '(case cond cond-> cond->> condp if-let if-not if-some when"
+    \.'         when-first when-let when-not when-some)'
+    \.'      "clojureException" '
+    \."       '(throw try catch finally)"
+    \.'      "clojureRepeat" '
+    \."       '(doseq dotimes while)"
+    \.'     }'
     \.'     (reduce-kv (fn [m kind entries]'
     \.'                   (merge m'
     \.'                          (zipmap (map str entries) '
