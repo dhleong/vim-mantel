@@ -12,11 +12,18 @@ let s:reservedSyntaxWords =
 " ======= utils ===========================================
 
 func! s:wrapCljWithMapToType(clj)
+    " from clojure we have to use the fully qualified class name,
+    " but from clojurescript we need to use *just* `MultiFn`
+    let multiFn = '#?('
+        \. ':cljs MultiFn '
+        \. ':default clojure.lang.MultiFn '
+        \. ')'
+
     return '(letfn [(fn-ref? [v]'
         \. '          (or (seq (:arglists (meta v)))'
         \. '              (when-let [derefd (when (var? v) @v)]'
         \. '                (or (fn? derefd)'
-        \. '                    (instance? MultiFn derefd)))))]'
+        \. '                    (instance? ' . multiFn . ' derefd)))))]'
         \. '  (->> ' . a:clj
         \. '       (filter (fn [{:keys [alias]}]'
         \. '                 (not (contains? '
@@ -127,7 +134,7 @@ endfunc
 
 " ======= Public interface ================================
 
-func! mantel#nrepl#FetchVarsViaEval(bufnr, code, ...)
+func! mantel#nrepl#FetchVarsViaEval(bufnr, code)
     " Asynchronously fetch vars by eval'ing clj code
     " The code should produce a sequence of maps with at least one of
     " the following keys:
@@ -135,30 +142,25 @@ func! mantel#nrepl#FetchVarsViaEval(bufnr, code, ...)
     "  - `:alias`   String; how the var is refer'd in the calling ns
     "  - `:?macro`  A symbol that *might* be the fqn of a macro
 
-    let opts = a:0 ? a:1 : {'cljs': 1}
-
     call mantel#async#AdjustPendingRequests(a:bufnr, 1)
+
 
     call mantel#nrepl#EvalAsVim(
         \ a:bufnr,
         \ s:wrapCljWithMapToType(a:code),
         \ function('s:onFetchVarsResponse', [a:bufnr]),
-        \ opts,
         \ )
 endfunc
 
-func! mantel#nrepl#EvalAsVim(bufnr, code, callback, ...)
-    let opts = a:0 ? a:1 : {'cljs': 1}
-
+func! mantel#nrepl#EvalAsVim(bufnr, code, callback)
     let request = {
         \ 'op': 'eval',
         \ 'code': s:wrapDictWithEvalable(a:code),
         \ }
 
-    if !opts.cljs
-        let request.session = 0
-    endif
-
     call mantel#async#AdjustPendingRequests(a:bufnr, 1)
-    call fireplace#message(request, function('s:onEvalResponse', [a:bufnr, a:callback]))
+    call fireplace#message(
+        \ request,
+        \ function('s:onEvalResponse', [a:bufnr, a:callback]),
+        \ )
 endfunc
