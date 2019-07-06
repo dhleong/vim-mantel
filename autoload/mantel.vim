@@ -49,6 +49,7 @@ func! mantel#TryHighlight() abort
         try
             call mantel#Highlight()
         catch /not an open channel/
+        catch /REPL/
         endtry
     endif
 endfunc
