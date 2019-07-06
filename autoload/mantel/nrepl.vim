@@ -76,8 +76,9 @@ func! s:resolveNonCljsVars(bufnr, symbols) abort
         \."   (clojure.core/name (clojure.core/keyword '"
         \.'" . v:val . ")))"'
         \ )
-    let request = '(clojure.core/->> [' .   join(items, ' ') . ' ]'
+    let request = '(clojure.core/some->> [' .   join(items, ' ') . ' ]'
                 \.'     (clojure.core/keep clojure.core/identity)'
+                \.'     clojure.core/seq'
                 \.'     (clojure.string/join "\", \"")'
                 \.'     (#(clojure.core/str "[\"" % "\"]"))'
                 \.'     (clojure.core/symbol))'
@@ -110,8 +111,10 @@ func! s:onResolvedNonCljsVars(bufnr, resp) abort
 
     " TODO it'd be nice if we could properly evaluate the type of
     " the var, instead of assuming their macros
-    let resolved = eval(a:resp.value)
-    call mantel#async#ConcatSyntaxKeys(a:bufnr, 'clojureMacro', resolved)
+    if a:resp.value !=# 'nil'
+        let resolved = eval(a:resp.value)
+        call mantel#async#ConcatSyntaxKeys(a:bufnr, 'clojureMacro', resolved)
+    endif
     call mantel#async#AdjustPendingRequests(a:bufnr, -1)
 endfunc
 
