@@ -98,7 +98,7 @@ func! s:onPath(bufnr, resp)
               \ . '         (:use-macros parsed)'
               \ . '         (:uses parsed))'
               \ . '       (map (fn [[var-name var-ns]]'
-              \ . '              (str var-ns "/" var-name))))))'
+              \ . '              (str var-ns "/" var-name)))))'
 
     call mantel#nrepl#EvalAsVim(
         \ a:bufnr,
