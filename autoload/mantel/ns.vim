@@ -54,9 +54,6 @@ func! s:onNsEval(bufnr, vars)
         let request = '[' . join(vars, ' ') . ']'
         call mantel#nrepl#FetchVarsViaEval(a:bufnr, request)
     endif
-
-    " this async bit is done
-    call mantel#async#AdjustPendingRequests(a:bufnr, -1)
 endfunc
 
 func! s:onPath(bufnr, resp)
@@ -114,8 +111,7 @@ func! mantel#ns#ParseReferred(bufnr, ns)
     " This is for situations where ns-refers isn't available, and is
     " likely a *terrible* idea.
 
-    call mantel#async#AdjustPendingRequests(a:bufnr, 1)
-    call fireplace#message({
+    call mantel#async#Message(a:bufnr, {
         \ 'op': 'ns-path',
         \ 'ns': a:ns,
         \ }, function('s:onPath', [a:bufnr]))
@@ -128,6 +124,5 @@ func! mantel#ns#ParseReferredPath(bufnr, path)
 
     " NOTE: this isn't async, but some of the callbacks assume that
     " there's an async request pending, so let's make it happen here
-    call mantel#async#AdjustPendingRequests(a:bufnr, 1)
     call s:onPath(a:bufnr, {'path': a:path})
 endfunc

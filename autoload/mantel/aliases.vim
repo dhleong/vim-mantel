@@ -20,7 +20,6 @@ func! s:onNsAliases(bufnr, resp)
     endfor
 
     call mantel#publics#FetchVarsForPairs(a:bufnr, pairs)
-    call mantel#async#AdjustPendingRequests(a:bufnr, -1)
 endfunc
 
 
@@ -29,10 +28,9 @@ endfunc
 func! mantel#aliases#Fetch(bufnr)
     " Fetch vars prefixed with a namespace alias
 
-    call mantel#async#AdjustPendingRequests(a:bufnr, 1)
-
     " fetch aliased namespaces (eg: clojure.spec :as s) so we can fetch public
     " vars in each
-    call fireplace#message({'op': 'ns-aliases'},
-        \ function('s:onNsAliases', [a:bufnr]))
+    call mantel#async#Message(a:bufnr, {
+        \ 'op': 'ns-aliases',
+        \ }, function('s:onNsAliases', [a:bufnr]))
 endfunc

@@ -88,8 +88,7 @@ func! s:resolveNonCljsVars(bufnr, symbols) abort
     " which breaks all the reader stuff and generally makes things hard to
     " maintain. It should be a fairly safe bet, however, that, if they are
     " successfully resolved, they're macros
-    call mantel#async#AdjustPendingRequests(a:bufnr, 1)
-    call fireplace#message({
+    call mantel#async#Message(a:bufnr, {
         \ 'op': 'eval',
         \ 'session': 0,
         \ 'code': request,
@@ -101,9 +100,6 @@ endfunc
 
 func! s:onResolvedNonCljsVars(bufnr, resp) abort
     if has_key(a:resp, 'ex') || has_key(a:resp, 'err')
-        if has_key(a:resp, 'ex')
-            call mantel#async#AdjustPendingRequests(a:bufnr, -1)
-        endif
         echom a:resp
     elseif !has_key(a:resp, 'value')
         return
@@ -115,7 +111,6 @@ func! s:onResolvedNonCljsVars(bufnr, resp) abort
         let resolved = eval(a:resp.value)
         call mantel#async#ConcatSyntaxKeys(a:bufnr, 'clojureMacro', resolved)
     endif
-    call mantel#async#AdjustPendingRequests(a:bufnr, -1)
 endfunc
 
 func! s:onFetchVarsResponse(bufnr, publics) abort
@@ -128,21 +123,15 @@ func! s:onFetchVarsResponse(bufnr, publics) abort
             call mantel#async#ConcatSyntaxKeys(a:bufnr, key, a:publics[key])
         endif
     endfor
-
-    call mantel#async#AdjustPendingRequests(a:bufnr, -1)
 endfunc
 
 func! s:onFetchTypedVarsResponse(bufnr, type, vars) abort
     call mantel#async#ConcatSyntaxKeys(a:bufnr, a:type, a:vars)
-    call mantel#async#AdjustPendingRequests(a:bufnr, -1)
 endfunc
 
 func! s:onEvalResponse(bufnr, callback, resp) abort
     if !has_key(a:resp, 'value')
         if has_key(a:resp, 'ex')
-            " we can get multiple 'err' responses, but should only
-            " get one ex
-            call mantel#async#AdjustPendingRequests(a:bufnr, -1)
             echom 'mantel error:' . a:resp.ex
         endif
 
@@ -157,7 +146,6 @@ func! s:onEvalResponse(bufnr, callback, resp) abort
 
     let evaluated = eval(a:resp.value)
     call a:callback(evaluated)
-    call mantel#async#AdjustPendingRequests(a:bufnr, -1)
 endfunc
 
 
@@ -170,8 +158,6 @@ func! mantel#nrepl#FetchVarsViaEval(bufnr, code)
     "  - `:var-ref` A Var instance
     "  - `:alias`   String; how the var is refer'd in the calling ns
     "  - `:?macro`  A symbol that *might* be the fqn of a macro
-
-    call mantel#async#AdjustPendingRequests(a:bufnr, 1)
 
     call mantel#nrepl#EvalAsVim(
         \ a:bufnr,
@@ -186,8 +172,6 @@ func! mantel#nrepl#FetchTypedVarsViaEval(bufnr, type, code)
     " aliases to vars of the given `type`, where `type` is one of the
     " syntax types, eg: clojureFunc, clojureVariable, etc.
 
-    call mantel#async#AdjustPendingRequests(a:bufnr, 1)
-
     call mantel#nrepl#EvalAsVim(
         \ a:bufnr,
         \ a:code,
@@ -201,8 +185,7 @@ func! mantel#nrepl#EvalAsVim(bufnr, code, callback)
         \ 'code': s:wrapDictWithEvalable(a:code),
         \ }
 
-    call mantel#async#AdjustPendingRequests(a:bufnr, 1)
-    call fireplace#message(
+    call mantel#async#Message(a:bufnr,
         \ request,
         \ function('s:onEvalResponse', [a:bufnr, a:callback]),
         \ )

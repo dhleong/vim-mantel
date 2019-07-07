@@ -1,4 +1,6 @@
 
+let s:pendingRequests = {}
+
 func! s:ApplyPendingSyntax(bufnr)
     " due to the way the syntax_keywords map is applied, we cannot allow
     " empty lists
@@ -21,25 +23,23 @@ func! s:ApplyPendingSyntax(bufnr)
         \ getbufvar(a:bufnr, '&syntax', 'clojure'))
 endfunc
 
-
-" ======= Public interface ================================
-
-func! mantel#async#AdjustPendingRequests(bufnr, delta)
-    let oldCount = getbufvar(a:bufnr, 'mantel_pendingRequests', -1)
-    if oldCount < 0
-        throw 'Illegal state: ' . oldCount . ' pending requests'
+func! s:onMessage(bufnr, callback, resp)
+    if !has_key(s:pendingRequests, a:resp.id)
+        " request canceled
+        return
     endif
 
-    let newCount = oldCount + a:delta
-    call setbufvar(a:bufnr, 'mantel_pendingRequests', newCount)
+    unlet s:pendingRequests[a:resp.id]
 
-    if a:delta < 0 && newCount == 0
-        " apply all changes at once to avoid flicker
+    call a:callback(a:resp)
+
+    if empty(s:pendingRequests)
         call s:ApplyPendingSyntax(a:bufnr)
     endif
-
-    return newCount
 endfunc
+
+
+" ======= Public interface ================================
 
 func! mantel#async#ConcatSyntaxKeys(bufnr, kind, keys)
     let pendingSyntax = getbufvar(a:bufnr, 'mantel_pendingSyntax', {})
@@ -48,4 +48,18 @@ func! mantel#async#ConcatSyntaxKeys(bufnr, kind, keys)
     else
         let pendingSyntax[a:kind] = a:keys
     endif
+endfunc
+
+func! mantel#async#Cancel()
+    " Cancel all pending async#Message requests
+    let s:pendingRequests = {}
+endfunc
+
+func! mantel#async#Message(bufnr, msg, callback)
+    " Forwards to fireplace#message in a way that can be canceled
+    let requestId = fireplace#message(
+        \ a:msg,
+        \ function('s:onMessage', [a:bufnr, a:callback]),
+        \ )
+    let s:pendingRequests[requestId] = 1
 endfunc

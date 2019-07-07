@@ -10,8 +10,10 @@ endfunc
 " ======= Public interface ================================
 
 func! mantel#Highlight() abort
+    " cancel all pending
+    call mantel#async#Cancel()
+
     " reset pending state for new request
-    " TODO cancel pending requests (?)
     let b:mantel_pendingRequests = 0
 
     let b:mantel_pendingSyntax = {
