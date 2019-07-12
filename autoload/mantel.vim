@@ -49,9 +49,14 @@ func! mantel#TryHighlight() abort
     " fireplace repl connection available
     if fireplace#op_available('eval')
         try
+            " this line acts as an explicit piggiebacked check:
+            call fireplace#client()
+
             call mantel#Highlight()
         catch /not an open channel/
         catch /REPL/
+        catch /AssertionError/
+            " occurs when not run on a cljs file when not piggiebacked
         endtry
     endif
 endfunc
