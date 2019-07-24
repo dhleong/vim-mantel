@@ -79,7 +79,7 @@ func! s:onPath(bufnr, resp)
     call fireplace#message({
         \ 'op': 'eval',
         \ 'code': "(require 'cljs.analyzer)"
-        \ })
+        \ }, v:t_dict)
 
     " NOTE: since accessing var metadata and things like (ns-publics) are
     " compile-time *only* in clojurescript, we have to first fetch the

@@ -57,9 +57,10 @@ endfunc
 
 func! mantel#async#Message(bufnr, msg, callback)
     " Forwards to fireplace#message in a way that can be canceled
-    let requestId = fireplace#message(
+    let Callback = function('s:onMessage', [a:bufnr, a:callback])
+    let request = fireplace#message(
         \ a:msg,
-        \ function('s:onMessage', [a:bufnr, a:callback]),
+        \ Callback,
         \ )
-    let s:pendingRequests[requestId] = 1
+    let s:pendingRequests[request.id] = 1
 endfunc
