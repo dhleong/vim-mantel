@@ -106,7 +106,7 @@ func! s:onResolvedNonCljsVars(bufnr, resp) abort
     endif
 
     " TODO it'd be nice if we could properly evaluate the type of
-    " the var, instead of assuming their macros
+    " the var, instead of assuming they're macros
     if a:resp.value !=# 'nil'
         let resolved = eval(a:resp.value)
         call mantel#async#ConcatSyntaxKeys(a:bufnr, 'clojureMacro', resolved)
