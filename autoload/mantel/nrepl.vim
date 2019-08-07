@@ -72,16 +72,15 @@ func! s:resolveNonCljsVars(bufnr, symbols) abort
     " Given a collection of namespaced symbols that couldn't be resolved in
     " the cljs context, attempt to resolve them in the clj context
     let items = map(copy(a:symbols),
-        \ '"(if (clojure.core/resolve ' . "'" . '" . v:val . ")'
-        \."   (clojure.core/name (clojure.core/keyword '"
-        \.'" . v:val . ")))"'
+        \ '"(when (resolve ' . "'" . '" . v:val . ")'
+        \."   (name (keyword '" . '" . v:val . ")))"'
         \ )
-    let request = '(clojure.core/some->> [' .   join(items, ' ') . ' ]'
-                \.'     (clojure.core/keep clojure.core/identity)'
-                \.'     clojure.core/seq'
+    let request = '(some->> [' .   join(items, ' ') . ' ]'
+                \.'     (keep identity)'
+                \.'     seq'
                 \.'     (clojure.string/join "\", \"")'
-                \.'     (#(clojure.core/str "[\"" % "\"]"))'
-                \.'     (clojure.core/symbol))'
+                \.'     (#(str "[\"" % "\"]"))'
+                \.'     (symbol))'
 
     " NOTE: it'd be nice to just use FetchVarsViaEval here, but this session
     " doesn't seem to be able to see the clojure.core vars for some reason,
@@ -89,8 +88,8 @@ func! s:resolveNonCljsVars(bufnr, symbols) abort
     " maintain. It should be a fairly safe bet, however, that, if they are
     " successfully resolved, they're macros
     call mantel#async#Message(a:bufnr, {
+        \ 'mantel': {'platform': 'clj'},
         \ 'op': 'eval',
-        \ 'session': 0,
         \ 'code': request,
         \ }, function('s:onResolvedNonCljsVars', [a:bufnr]))
 endfunc

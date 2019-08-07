@@ -56,9 +56,21 @@ func! mantel#async#Cancel()
 endfunc
 
 func! mantel#async#Message(bufnr, msg, callback)
+    let opts = get(a:msg, 'mantel', {})
+
     " Forwards to fireplace#message in a way that can be canceled
     let Callback = function('s:onMessage', [a:bufnr, a:callback])
-    let request = fireplace#message(
+
+    let preferredPlatform = get(opts, 'platform', '')
+    if preferredPlatform ==# 'clj'
+        let platform = fireplace#clj()
+    elseif preferredPlatform ==# 'cljs'
+        let platform = fireplace#cljs()
+    else
+        let platform = fireplace#platform(a:bufnr)
+    endif
+
+    let request = platform.Message(
         \ a:msg,
         \ Callback,
         \ )
