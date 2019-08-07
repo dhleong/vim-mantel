@@ -32,5 +32,6 @@ func! mantel#aliases#Fetch(bufnr)
     " vars in each
     call mantel#async#Message(a:bufnr, {
         \ 'op': 'ns-aliases',
+        \ 'ns': fireplace#platform().BufferNs(a:bufnr),
         \ }, function('s:onNsAliases', [a:bufnr]))
 endfunc

@@ -63,9 +63,9 @@ func! mantel#async#Message(bufnr, msg, callback)
 
     let preferredPlatform = get(opts, 'platform', '')
     if preferredPlatform ==# 'clj'
-        let platform = fireplace#clj()
+        let platform = fireplace#clj(a:bufnr)
     elseif preferredPlatform ==# 'cljs'
-        let platform = fireplace#cljs()
+        let platform = fireplace#cljs(a:bufnr)
     else
         let platform = fireplace#platform(a:bufnr)
     endif
