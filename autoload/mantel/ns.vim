@@ -81,6 +81,12 @@ func! s:onPath(bufnr, resp)
         \ 'code': "(require 'cljs.analyzer)"
         \ }, v:t_dict)
 
+    " HACKS: there must be a better way to handle this, but the empty analyzer
+    " env doesn't seem to handle things like clojure.core.async (it barfs with
+    " a warning that it doesn't exist) but cljs.core.async can be used just
+    " fine (as with other clojure.core properties).
+    let contents = substitute(contents, '[clojure.', '[cljs.', '')
+
     " NOTE: since accessing var metadata and things like (ns-publics) are
     " compile-time *only* in clojurescript, we have to first fetch the
     " symbols, then issue *another* request to get their info
