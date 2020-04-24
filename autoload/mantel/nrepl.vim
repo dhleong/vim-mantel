@@ -44,9 +44,10 @@ func! s:wrapCljWithMapToType(clj)
         \. '                (or (fn? derefd)'
         \. '                    (instance? ' . multiFn . ' derefd)))))]'
         \. '  (->> ' . a:clj
-        \. '       (filter (fn [{:keys [alias]}]'
-        \. '                 (not (contains? '
-        \.                     s:reservedSyntaxWords . ' alias))))'
+        \. '       (map (fn [{:keys [alias] :as item}]'
+        \. '              (if (contains? ' . s:reservedSyntaxWords . ' alias)'
+        \. '                (update item :alias (partial str "\\"))'
+        \. '                item)))'
         \. '       (map (fn [{:keys [var-ref alias ?macro]}]'
         \. '              (let [m (meta var-ref)'
         \. '                    n (str (or alias (:name m) ?macro))]'
