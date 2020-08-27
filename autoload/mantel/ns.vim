@@ -79,7 +79,7 @@ func! s:onPath(bufnr, resp)
     call fireplace#message({
         \ 'op': 'eval',
         \ 'code': "(require 'cljs.analyzer)"
-        \ }, v:t_dict)
+        \ })
 
     " HACKS: there must be a better way to handle this, but the empty analyzer
     " env doesn't seem to handle things like clojure.core.async (it barfs with
