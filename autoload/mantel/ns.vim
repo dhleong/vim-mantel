@@ -38,14 +38,14 @@ endfunc
 " ======= Callbacks =======================================
 
 func! s:onNsEval(bufnr, vars)
-    if type(a:vars) != type([])
+    if type(a:vars) != type({})
         return
     endif
 
-    if len(a:vars)
+    if len(a:vars.symbols)
         " okay, one more hop: resolve the types of the non-macro referred vars
         let vars = []
-        for v in a:vars
+        for v in a:vars.symbols
             " if we can't resolve the var, it might be a macro
             call add(vars, "(if-let [var-ref (resolve '" . v . ')]'
                         \. '  {:var-ref var-ref}'
@@ -76,10 +76,10 @@ func! s:onPath(bufnr, resp)
     endif
 
     " ensure the cljs analyzer ns is loaded
-    call fireplace#message({
+    call fireplace#clj().Message({
         \ 'op': 'eval',
-        \ 'code': "(require 'cljs.analyzer)"
-        \ })
+        \ 'code': "(require 'cljs.analyzer)",
+        \ }, v:t_dict)
 
     " HACKS: there must be a better way to handle this, but the empty analyzer
     " env doesn't seem to handle things like clojure.core.async (it barfs with
@@ -97,15 +97,16 @@ func! s:onPath(bufnr, resp)
               \ . "                 'ns"
               \ . '                 (cljs.analyzer/empty-env)'
               \ . '                 ns-form))]'
-              \ . '  (->> (concat'
-              \ . '         (:use-macros parsed)'
-              \ . '         (:uses parsed))'
-              \ . '       (map (fn [[var-name var-ns]]'
-              \ . '              (str var-ns "/" var-name)))))'
+              \ . '  {:symbols'
+              \ . '   (->> (concat'
+              \ . '          (:use-macros parsed)'
+              \ . '          (:uses parsed))'
+              \ . '        (map (fn [[var-name var-ns]]'
+              \ . '               (str var-ns "/" var-name))))})'
 
     call mantel#nrepl#EvalAsVim(
         \ a:bufnr,
-        \ request,
+        \ { 'platform': 'clj', 'code': request },
         \ function('s:onNsEval', [a:bufnr]))
 endfunc
 

@@ -144,8 +144,13 @@ func! s:onEvalResponse(bufnr, callback, resp) abort
         return
     endif
 
-    let evaluated = eval(a:resp.value)
-    call a:callback(evaluated)
+    try
+        let evaluated = eval(a:resp.value)
+        call a:callback(evaluated)
+    catch /.*/
+        echom "ERR evaluating: " . a:resp.value
+        echom v:errmsg
+    endtry
 endfunc
 
 
@@ -180,10 +185,20 @@ func! mantel#nrepl#FetchTypedVarsViaEval(bufnr, type, code)
 endfunc
 
 func! mantel#nrepl#EvalAsVim(bufnr, code, callback)
+    if type(a:code) == v:t_dict
+        let code = a:code.code
+    else
+        let code = a:code
+    endif
+
     let request = {
         \ 'op': 'eval',
-        \ 'code': s:wrapDictWithEvalable(a:code),
+        \ 'code': s:wrapDictWithEvalable(code),
         \ }
+
+    if type(a:code) == v:t_dict && has_key(a:code, 'platform')
+        let request.platform = a:code.platform
+    endif
 
     call mantel#async#Message(a:bufnr,
         \ request,
