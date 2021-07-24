@@ -129,13 +129,13 @@ func! s:onFetchTypedVarsResponse(bufnr, type, vars) abort
     call mantel#async#ConcatSyntaxKeys(a:bufnr, a:type, a:vars)
 endfunc
 
-func! s:onEvalResponse(bufnr, callback, resp) abort
+func! s:onEvalResponse(bufnr, printErrors, callback, resp) abort
     if !has_key(a:resp, 'value')
-        if has_key(a:resp, 'ex')
+        if a:printErrors && has_key(a:resp, 'ex')
             echom 'mantel error:' . a:resp.ex
         endif
 
-        if has_key(a:resp, 'err') && a:resp.err !~# '^WARNING'
+        if a:printErrors && has_key(a:resp, 'err') && a:resp.err !~# '^WARNING'
             " log the error
             echom 'mantel error:' . a:resp.err
         endif
@@ -148,7 +148,7 @@ func! s:onEvalResponse(bufnr, callback, resp) abort
         let evaluated = eval(a:resp.value)
         call a:callback(evaluated)
     catch /.*/
-        echom "ERR evaluating: " . a:resp.value
+        echom 'ERR evaluating: ' . a:resp.value
         echom v:errmsg
     endtry
 endfunc
@@ -185,8 +185,10 @@ func! mantel#nrepl#FetchTypedVarsViaEval(bufnr, type, code)
 endfunc
 
 func! mantel#nrepl#EvalAsVim(bufnr, code, callback)
+    let printErrors = 1
     if type(a:code) == v:t_dict
         let code = a:code.code
+        let printErrors = get(a:code, 'printErrors', printErrors)
     else
         let code = a:code
     endif
@@ -202,6 +204,6 @@ func! mantel#nrepl#EvalAsVim(bufnr, code, callback)
 
     call mantel#async#Message(a:bufnr,
         \ request,
-        \ function('s:onEvalResponse', [a:bufnr, a:callback]),
+        \ function('s:onEvalResponse', [a:bufnr, printErrors, a:callback]),
         \ )
 endfunc

@@ -75,11 +75,16 @@ func! s:onPath(bufnr, resp)
         let readerNs = 'clojure.edn'
     endif
 
-    " ensure the cljs analyzer ns is loaded
-    call fireplace#clj().Message({
+    " ensure the cljs analyzer and reader ns are loaded
+    let result = fireplace#clj().Message({
         \ 'op': 'eval',
         \ 'code': "(require 'cljs.analyzer)",
         \ }, v:t_dict)
+
+    if get(result, 'err', '') !=# ''
+        " Could not load the cljs.analyzer ns
+        return
+    endif
 
     " HACKS: there must be a better way to handle this, but the empty analyzer
     " env doesn't seem to handle things like clojure.core.async (it barfs with
@@ -106,7 +111,7 @@ func! s:onPath(bufnr, resp)
 
     call mantel#nrepl#EvalAsVim(
         \ a:bufnr,
-        \ { 'platform': 'clj', 'code': request },
+        \ { 'platform': 'clj', 'code': request, 'printErrors': 0 },
         \ function('s:onNsEval', [a:bufnr]))
 endfunc
 
