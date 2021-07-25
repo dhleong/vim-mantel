@@ -1,4 +1,6 @@
 
+let s:lastHighlightChange = -1
+
 " ======= utils ===========================================
 
 func! s:hasNsRefers(bufnr)
@@ -44,7 +46,14 @@ func! mantel#Highlight() abort
     call mantel#imports#Fetch(bufnr, ns)
 endfunc
 
-func! mantel#TryHighlight() abort
+func! mantel#TryHighlight(...) abort
+    let change = changenr()
+    if change == s:lastHighlightChange && a:0 == 0
+        " Nop; avoid unnecessary highlight requests
+        return
+    endif
+    let s:lastHighlightChange = change
+
     " Attempt to perform highlighting if there's an active
     " fireplace repl connection available
     if fireplace#op_available('eval')

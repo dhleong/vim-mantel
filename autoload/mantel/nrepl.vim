@@ -100,7 +100,7 @@ endfunc
 
 func! s:onResolvedNonCljsVars(bufnr, resp) abort
     if has_key(a:resp, 'ex') || has_key(a:resp, 'err')
-        echom a:resp
+        call mantel#async#NotifyError(get(a:resp, 'err', get(a:resp, 'ex', '')))
     elseif !has_key(a:resp, 'value')
         return
     endif
@@ -132,12 +132,10 @@ endfunc
 func! s:onEvalResponse(bufnr, printErrors, callback, resp) abort
     if !has_key(a:resp, 'value')
         if a:printErrors && has_key(a:resp, 'ex')
-            echom 'mantel error:' . a:resp.ex
-        endif
-
-        if a:printErrors && has_key(a:resp, 'err') && a:resp.err !~# '^WARNING'
+            call mantel#async#NotifyError(a:resp.ex)
+        elseif a:printErrors && has_key(a:resp, 'err') && a:resp.err !~# '^WARNING'
             " log the error
-            echom 'mantel error:' . a:resp.err
+            call mantel#async#NotifyError(a:resp.err)
         endif
 
         " whatever the case, don't try to eval

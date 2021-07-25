@@ -1,5 +1,6 @@
 
 let s:pendingRequests = {}
+let s:pendingErrors = []
 
 func! s:ApplyPendingSyntax(bufnr)
     " due to the way the syntax_keywords map is applied, we cannot allow
@@ -23,6 +24,13 @@ func! s:ApplyPendingSyntax(bufnr)
         \ getbufvar(a:bufnr, '&syntax', 'clojure'))
 endfunc
 
+func! s:ShowPendingErrors()
+    for error in s:pendingErrors
+        echom 'mantel error: ' . error
+    endfor
+    let s:pendingErrors = []
+endfunc
+
 func! s:onMessage(bufnr, callback, resp)
     if !has_key(s:pendingRequests, a:resp.id)
         " request canceled
@@ -35,6 +43,7 @@ func! s:onMessage(bufnr, callback, resp)
 
     if empty(s:pendingRequests)
         call s:ApplyPendingSyntax(a:bufnr)
+        call s:ShowPendingErrors()
     endif
 endfunc
 
@@ -75,4 +84,14 @@ func! mantel#async#Message(bufnr, msg, callback)
         \ Callback,
         \ )
     let s:pendingRequests[request.id] = 1
+endfunc
+
+func! mantel#async#NotifyError(err)
+    if index(s:pendingErrors, a:err) == -1
+        call add(s:pendingErrors, a:err)
+    endif
+
+    if empty(s:pendingRequests)
+        call s:ShowPendingErrors()
+    endif
 endfunc
